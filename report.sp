@@ -10,62 +10,49 @@ public Plugin myinfo = {
 }
 
 public void OnPluginStart(){
-	RegConsoleCmd("sql_test", sql_test);
 	RegConsoleCmd("sm_report", sm_report);
 
 }
 public Action:sm_report(int client, int args){
 	
-	char reported[128];
+	char arg1[64];
+	char query[255];
+	char reported[64];
 
+	GetCmdArg(1, arg1, sizeof(arg1));
+	int reportedTarget = FindTarget(client, arg1);
+	
+	if(reportedTarget == -1){
+		ReplyToCommand(client, "Couldn't find the user.. Did you type correct?");
+		return Plugin_Handled;
+	}
+	// GET THE STEAMID OF THE USER WITH THE INDEX PROVIDED ABOVE
+	GetClientAuthString(reportedTarget, reported, 255);
 
+	// REPLACE SOME CHARACTERS
+	ReplaceString(reported, 255, "_1:", "_0:");
+	Format(query, sizeof(query), "UPDATE users SET reports = reports + 1 WHERE steamid = '%s'", reported);
 
-	GetCmdArg(1, reported, sizeof(reported));
-
-	int target = FindTarget(client, reported);
 	if(client){
-		if(target == -1){
-			ReplyToCommand(client, "Couldn't the user. Are you sure that you typed correctly?");
-			return Plugin_Handled;
-		}else {
-			ReplyToCommand(client, "Reported the user!");
-			    new String:error[255];
-				new Handle:db = SQL_DefConnect(error, sizeof(error));
+			ReplyToCommand(client, "Reported the steamid: %s", reported);
+			
+			    new String:Error[255];
+				new Handle:db = SQL_DefConnect(Error, sizeof(Error));
 				if(db == null){
-					PrintToServer("Failed to connect to database: %s", error);
+					PrintToServer("Failed to connect to database: %s", Error);
 					return Plugin_Handled;
 				}else {
 					// FIXA MER HÄR IMORGON
 					// FIXA MER HÄR IMORGON
 					// FIXA MER HÄR IMORGON
-					new Handle:query = SQL_Query(db, "DELETE FROM users WHERE id = 5");
+					if(!SQL_FastQuery(db, query)){
+						char error[255];
+						SQL_GetError(db, error, sizeof(error));
+						PrintToServer("Failed to query (error: %s)", error);
+					}
+
 				}
-		}
-		
 	}
 	return Plugin_Handled;
 	
-}
-public Action:sql_test(int client, int args){
-    
-    new String:error[255];
-
-	new Handle:db = SQL_DefConnect(error, sizeof(error));
-	if (db == null)
-	{
-		PrintToServer("Failed to connect: %s", error);
-	    return Plugin_Handled;
-	}else {
-        new Handle:query = SQL_Query(db, "DELETE FROM users WHERE id = 5");
-        if(query == null){
-		    SQL_GetError(db, error, sizeof(error))
-            PrintToServer("Failed to query %s", error);
-            
-        }else {
-			PrintToServer("Success");
-		}
-    }
-    
-    return Plugin_Handled;
-
 }
